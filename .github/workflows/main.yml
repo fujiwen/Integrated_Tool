@@ -36,4 +36,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Supplier RECON TOOLS
-        path: dist/SRT_RECON_TOOLS.exe
+        path: dist/Integrated_Tool.exe
