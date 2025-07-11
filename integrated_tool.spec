@@ -3,16 +3,37 @@
 block_cipher = None
 
 a = Analysis(
-    ['SRT_RECON_TOOLS.py'],
+    ['Integrated_Tool.py'],
     pathex=[],
     binaries=[],
     datas=[
         ('favicon.ico', '.'),
+        ('version.txt', '.'),
+        ('config.txt', '.'),
         ('Bldbuy_Recon_UI.py', '.'),
         ('Product_Classification_Tool.py', '.'),
-        ('version.txt', '.'),
     ],
-    hiddenimports=[],
+    hiddenimports=[
+        'Bldbuy_Recon_UI',
+        'Product_Classification_Tool',
+        'pandas',
+        'numpy',
+        'openpyxl',
+        'PIL',
+        'PIL._tkinter_finder',
+        'PIL.ImageTk',
+        'tkinter',
+        'tkinter.ttk',
+        'tkinter.messagebox',
+        'tkinter.filedialog',
+        'tkinter.constants',
+        'datetime',
+        'warnings',
+        'glob',
+        'threading',
+        'shutil',
+        'logging'
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -39,10 +60,11 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,
+    console=True,
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='favicon.ico'
+    icon='favicon.ico',
+    target_os='darwin'
 )
