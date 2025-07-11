@@ -153,7 +153,7 @@ class ProductClassificationApp:
         return current_date <= expiration_date
     
     def create_control_panel(self):
-        control_frame = ttk.LabelFrame(self.main_frame, text="生成确认函", padding="10")
+        control_frame = ttk.LabelFrame(self.main_frame, text="请选择[供货明细报表]生成确认函", padding="10")
         control_frame.pack(fill=X, pady=5)
         
         # 选择模式框架

@@ -67,12 +67,12 @@ class BldBuyApp:
     def check_expiration(self):
         """检查时间是否到期"""
         current_date = datetime.now()
-        expiration_date = datetime(2099, 12, 01)  # 年底到期
+        expiration_date = datetime(2099, 12, 31)  # 年底到期
         
         return current_date <= expiration_date
         
     def create_control_panel(self):
-        control_frame = ttk.LabelFrame(self.main_frame, text="收货单商品明细", padding="10")
+        control_frame = ttk.LabelFrame(self.main_frame, text="请选择[收货单商品明细]报表", padding="10")
         control_frame.pack(fill=X, pady=5)
         
         # 修改为选择文件按钮
