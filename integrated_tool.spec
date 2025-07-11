@@ -3,7 +3,7 @@
 block_cipher = None
 
 a = Analysis(
-    ['Integrated_Tool.py'],
+    ['SRT_RECON_TOOLS.py'],
     pathex=[],
     binaries=[],
     datas=[
