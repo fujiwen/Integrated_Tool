@@ -4,6 +4,8 @@ import os
 import sys
 import subprocess
 from datetime import datetime
+import importlib.util
+import logging
 
 def get_config_path():
     """获取配置文件路径"""
@@ -67,7 +69,7 @@ class IntegratedTool:
         self.classification_btn.pack(pady=10)
         
         # 添加开发者信息
-        self.dev_label = ttk.Label(self.main_frame, text="Powered By Cayman Fu @ Sofitel HAIKOU 2025 Ver 2.3.1")
+        self.dev_label = ttk.Label(self.main_frame, text="Powered By Cayman Fu @ Sofitel HAIKOU 2025 Ver 2.3")
         self.dev_label.pack(side=tk.BOTTOM, pady=10)
     
     def set_window_geometry(self, width, height):
@@ -83,23 +85,23 @@ class IntegratedTool:
     def _import_module(self, module_name):
         """导入模块，支持打包环境"""
         try:
-            # 首先尝试直接导入
-            return __import__(module_name)
-        except ImportError as e:
-            logging.warning(f"直接导入 {module_name} 失败：{str(e)}")
-            try:
-                # 尝试从当前目录导入
-                module_path = os.path.join(get_base_path(), f"{module_name}.py")
-                if os.path.exists(module_path):
-                    import importlib.util
-                    spec = importlib.util.spec_from_file_location(module_name, module_path)
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                    return module
-                else:
-                    raise ImportError(f"找不到模块文件：{module_path}")
-            except Exception as e2:
-                raise ImportError(f"导入模块失败：{str(e2)}")
+            # 首先尝试从当前目录导入
+            module_path = os.path.join(get_base_path(), f"{module_name}.py")
+            if os.path.exists(module_path):
+                logging.info(f"从路径导入模块：{module_path}")
+                spec = importlib.util.spec_from_file_location(module_name, module_path)
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = module  # 将模块添加到 sys.modules
+                spec.loader.exec_module(module)
+                return module
+            else:
+                # 如果文件不存在，尝试直接导入
+                logging.info(f"尝试直接导入模块：{module_name}")
+                return __import__(module_name)
+        except Exception as e:
+            error_msg = f"导入模块 {module_name} 失败：{str(e)}"
+            logging.error(error_msg, exc_info=True)
+            raise ImportError(error_msg)
     
     def launch_recon_tool(self):
         """启动供应商供货明细表工具"""
@@ -194,7 +196,6 @@ def get_base_path():
 if __name__ == "__main__":
     try:
         # 设置日志文件
-        import logging
         base_path = get_base_path()
         log_path = os.path.join(base_path, 'error.log')
         logging.basicConfig(
