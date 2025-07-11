@@ -1,39 +1,41 @@
-name: Recon Integrated Tool
+name: Build Integrated Tool
 
 on:
   push:
     paths:
-      - '**/*.py'  # 匹配所有 Python 文件的更改
+      - '**.py'  # 匹配所有 Python 文件的更改
+      - '**.spec'  # 匹配所有 spec 文件的更改
   pull_request:
     paths:
-      - '**/*.py'  # 匹配所有 Python 文件的更改
+      - '**.py'  # 匹配所有 Python 文件的更改
+      - '**.spec'  # 匹配所有 spec 文件的更改
 
- 
 jobs:
   build:
     runs-on: windows-latest
  
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
  
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
-        python-version: 3.x
+        python-version: '3.13'
  
-    - name: Install PyInstaller
-      run: pip install pyinstaller
-
     - name: Install dependencies
-      run: pip install pandas numpy openpyxl xlrd 
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install pandas numpy openpyxl xlrd pillow tk
  
-    - name: Build EXE
-      run: pyinstaller integrated_tool.spec
+    - name: Build App
+      run: |
+        pyinstaller integrated_tool.spec
       env:
         CC: mingw32-gcc
  
-    - name: Upload EXE
+    - name: Upload App
       uses: actions/upload-artifact@v4
       with:
-        name: Supplier RECON TOOLS
-        path: dist/Integrated_Tool.exe
+        name: integrated_tool
+        path: dist/供应商对账工具集.exe
