@@ -37,7 +37,7 @@ jobs:
         dir
         python -c "import Bldbuy_Recon_UI; print('Successfully imported Bldbuy_Recon_UI')"
         python -c "import Product_Classification_Tool; print('Successfully imported Product_Classification_Tool')"
-        pyinstaller integrated_tool.spec
+        pyinstaller --clean integrated_tool.spec
       env:
         CC: mingw32-gcc
         PYTHONPATH: .
