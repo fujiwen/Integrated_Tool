@@ -25,7 +25,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller
+        pip install pyinstaller==5.13.2
         pip install pandas numpy openpyxl xlrd pillow tk
         pip install -r requirements.txt
         python -c "import sys; print('Python Path:', sys.path)"
