@@ -39,7 +39,7 @@ a = Analysis(
     runtime_hooks=[],
     excludes=[],
     win_no_prefer_redirects=False,
-    win_private_assemblies=False,
+    win_private_assemblies=True,  # 修改为True以减少误报
     cipher=block_cipher,
     noarchive=False,
 )
@@ -57,7 +57,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,  # 禁用UPX压缩以减少误报
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
