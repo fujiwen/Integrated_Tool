@@ -39,9 +39,9 @@ a = Analysis(
     runtime_hooks=[],
     excludes=[],
     win_no_prefer_redirects=False,
-    win_private_assemblies=True,  # 修改为True以减少误报
     cipher=block_cipher,
     noarchive=False,
+    optimize=1,
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
