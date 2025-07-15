@@ -69,7 +69,7 @@ class IntegratedTool:
         self.classification_btn.pack(pady=10)
         
         # 添加开发者信息
-        self.dev_label = ttk.Label(self.main_frame, text="Powered By Cayman Fu @ Sofitel HAIKOU 2025 Ver 2.3.1")
+        self.dev_label = ttk.Label(self.main_frame, text="Powered By Cayman Fu @ Sofitel HAIKOU 2025 Ver 2.4")
         self.dev_label.pack(side=tk.BOTTOM, pady=10)
     
     def set_window_geometry(self, width, height):
