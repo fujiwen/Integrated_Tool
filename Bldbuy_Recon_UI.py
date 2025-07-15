@@ -143,7 +143,16 @@ class BldBuyApp:
         
         # 使用找到的表头行读取数据
         df = pd.read_excel(file_path, skiprows=header_row)
-        df_filtered = df.reindex(columns=[col if col != '单位' else '基本单位' for col in self.expected_headers if col in df.columns or col == '基本单位'])
+        
+        # 添加需要保留的退货相关列，排除N-R列数据
+        required_columns = self.expected_headers + ['退货', '合计退货数量', '退货合计金额(结算)', '退货合计税额(结算)', '退货合计价税(结算)']
+        
+        # 过滤并重新排列列，排除N-R列的数据
+        exclude_columns = df.iloc[:, 13:17].columns.tolist()  # N-R列的索引是13-17
+        df = df.drop(columns=exclude_columns, errors='ignore')
+        
+        # 过滤并保留所需列
+        df_filtered = df.reindex(columns=[col if col != '单位' else '基本单位' for col in required_columns if col in df.columns or col == '基本单位'])
         
         # 处理收货日期，去掉时间部分
         if '收货日期' in df_filtered.columns:
@@ -373,21 +382,80 @@ class BldBuyApp:
             
         # 写入表头和数据
         ws.append(self.expected_headers)
-        for row in dataframe_to_rows(group_data, index=False, header=False):
-            formatted_row = list(row)
-            if len(formatted_row) > self.expected_headers.index('税率'):
-                tax_rate_value = formatted_row[self.expected_headers.index('税率')]
-                if pd.notna(tax_rate_value):
-                    formatted_row[self.expected_headers.index('税率')] = f"{int(float(tax_rate_value) * 100)}%"
-                else:
-                    formatted_row[self.expected_headers.index('税率')] = '0%'
-            ws.append(formatted_row)
-            
-        # 添加合计行
-        subtotal_amount = group_data['小计金额(结算)'].sum()
-        tax_amount = group_data['税额(结算)'].sum()
-        total_amount = group_data['小计价税(结算)'].sum()
+        yellow_fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
         
+        # 创建一个列表来存储所有行的数据，包括退货行
+        all_rows = []
+        subtotal_amount = 0
+        tax_amount = 0
+        total_amount = 0
+        
+        for row in dataframe_to_rows(group_data, index=False, header=False):
+            # 只保留expected_headers中定义的列
+            formatted_row = [row[group_data.columns.get_loc(col)] if col in group_data.columns else '' for col in self.expected_headers]
+            
+            # 处理税率格式
+            tax_rate_idx = self.expected_headers.index('税率')
+            if len(formatted_row) > tax_rate_idx:
+                tax_rate_value = formatted_row[tax_rate_idx]
+                if pd.notna(tax_rate_value):
+                    formatted_row[tax_rate_idx] = f"{int(float(tax_rate_value) * 100)}%"
+                else:
+                    formatted_row[tax_rate_idx] = '0%'
+            
+            # 添加原始行
+            all_rows.append((formatted_row, False))  # False表示不是退货行
+            
+            # 更新合计金额
+            subtotal_idx = self.expected_headers.index('小计金额(结算)')
+            tax_idx = self.expected_headers.index('税额(结算)')
+            total_idx = self.expected_headers.index('小计价税(结算)')
+            
+            if len(formatted_row) > max(subtotal_idx, tax_idx, total_idx):
+                if pd.notna(formatted_row[subtotal_idx]):
+                    subtotal_amount += float(formatted_row[subtotal_idx])
+                if pd.notna(formatted_row[tax_idx]):
+                    tax_amount += float(formatted_row[tax_idx])
+                if pd.notna(formatted_row[total_idx]):
+                    total_amount += float(formatted_row[total_idx])
+            
+            # 检查是否为退货数据并创建退货行
+            if '退货' in group_data.columns and pd.notna(row[group_data.columns.get_loc('退货')]) and row[group_data.columns.get_loc('退货')] == '是':
+                return_row = formatted_row.copy()
+                
+                # 设置退货数量（负数）
+                if '合计退货数量' in group_data.columns:
+                    return_value = -float(row[group_data.columns.get_loc('合计退货数量')])
+                    return_row[self.expected_headers.index('实收数量')] = return_value
+                
+                # 设置退货金额（负数）
+                if '退货合计金额(结算)' in group_data.columns:
+                    return_value = -float(row[group_data.columns.get_loc('退货合计金额(结算)')])
+                    return_row[self.expected_headers.index('小计金额(结算)')] = return_value
+                    subtotal_amount += return_value
+                
+                # 设置退货税额（负数）
+                if '退货合计税额(结算)' in group_data.columns:
+                    return_value = -float(row[group_data.columns.get_loc('退货合计税额(结算)')])
+                    return_row[self.expected_headers.index('税额(结算)')] = return_value
+                    tax_amount += return_value
+                
+                # 设置退货价税合计（负数）
+                if '退货合计价税(结算)' in group_data.columns:
+                    return_value = -float(row[group_data.columns.get_loc('退货合计价税(结算)')])
+                    return_row[self.expected_headers.index('小计价税(结算)')] = return_value
+                    total_amount += return_value
+                
+                all_rows.append((return_row, True))  # True表示是退货行
+        
+        # 写入所有行并设置样式
+        for row_data, is_return in all_rows:
+            ws.append(row_data)
+            if is_return:  # 如果是退货行，设置黄色背景
+                for cell in ws[ws.max_row]:
+                    cell.fill = yellow_fill
+        
+        # 添加合计行
         last_row = ws.max_row + 1
         ws.cell(row=last_row, column=self.expected_headers.index("单价(结算)") + 1, value="合计")
         ws.cell(row=last_row, column=self.expected_headers.index("小计金额(结算)") + 1, value="{:.2f}".format(subtotal_amount))
@@ -434,15 +502,15 @@ class BldBuyApp:
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 if cell.row <= 5:
                     cell.fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
-                    cell.font = Font(color='FFFFFF', size=16, name='微软雅黑', bold=True)
+                    cell.font = Font(color='FFFFFF', size=18, name='微软雅黑', bold=True)
                 elif cell.row == 6:
                     cell.fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
-                    cell.font = Font(color='FFFFFF', size=9, name='微软雅黑', bold=True)
+                    cell.font = Font(color='FFFFFF', size=10, name='微软雅黑', bold=True)
                 elif cell.row == ws.max_row:
                     cell.fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
-                    cell.font = Font(color='FFFFFF', size=9, name='微软雅黑', bold=True)
+                    cell.font = Font(color='FFFFFF', size=10, name='微软雅黑', bold=True)
                 else:
-                    cell.font = Font(size=10, name='微软雅黑')
+                    cell.font = Font(size=11, name='微软雅黑')
                     
     def bring_to_front(self):
         """将窗口带到前台"""
@@ -457,7 +525,7 @@ class BldBuyApp:
         
         developer_label = ttk.Label(
             developer_frame,
-            text="Powered By Cayman Fu @ Sofitel HAIKOU 2025 Ver 2.3",
+            text="Powered By Cayman Fu @ Sofitel HAIKOU 2025 Ver 2.3.1",
             font=("微软雅黑", 8),
             foreground="gray"
         )

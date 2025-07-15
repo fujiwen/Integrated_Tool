@@ -465,9 +465,16 @@ class ProductClassificationApp:
                 output_file = file_path
                 self.log_message("将直接在原文件上操作...")
             else:
-                output_dir = os.path.dirname(file_path)
+                output_dir = os.path.join(os.path.dirname(file_path), "Confirmed")
+                # 确保Confirmed文件夹存在
+                os.makedirs(output_dir, exist_ok=True)
                 file_name, file_ext = os.path.splitext(os.path.basename(file_path))
-                output_file = os.path.join(output_dir, f"{file_name}_分类{file_ext}")
+                # 如果文件名已经包含"_分类"，则替换为"_确认函"，否则直接添加"_确认函"
+                if "_分类" in file_name:
+                    file_name = file_name.replace("_分类", "_确认函")
+                else:
+                    file_name = f"{file_name}_确认函"
+                output_file = os.path.join(output_dir, f"{file_name}{file_ext}")
                 self.log_message("正在保存到新文件...")
             
             try:
@@ -480,9 +487,9 @@ class ProductClassificationApp:
                     # 尝试读取Statement Sheet中的L7单元格数据（供应商名称）
                     supplier_name = ""
                     try:
-                        # 检查是否存在名为"Statement Sheet"的工作表
-                        if "Statement Sheet" in wb.sheetnames:
-                            statement_sheet = wb["Statement Sheet"]
+                        # 检查是否存在名为"Statement"的工作表
+                        if "Statement" in wb.sheetnames:
+                            statement_sheet = wb["Statement"]
                             supplier_name = statement_sheet.cell(row=7, column=12).value  # L列是第12列
                             if supplier_name:
                                 self.log_message(f"从Statement Sheet的L7单元格读取到供应商名称: {supplier_name}")
@@ -740,7 +747,7 @@ class ProductClassificationApp:
                             # 转换为小写
                             lowercase_amount = f"{total_amount:.2f}元"
                             # 写入B9单元格（含税总金额人民币大写）
-                            summary_sheet.cell(row=9, column=2, value=f"{chinese_amount}（{lowercase_amount}）")
+                            summary_sheet.cell(row=9, column=2, value=f"{chinese_amount}（小写：{lowercase_amount}）")
                             self.log_message(f"已将总金额 {total_amount} 转换为大写 {chinese_amount} 并写入B9单元格")
                         else:
                             self.log_message("总金额为空，无法转换为中文大写")
@@ -767,9 +774,42 @@ class ProductClassificationApp:
                             self.log_message("未税总金额为空，无法写入B10单元格")
                             
                         if total_tax is not None:
-                            # 写入B11单元格，前面加上"小写"，后面加上"元"
-                            summary_sheet.cell(row=11, column=2, value=f"小写{total_tax:.2f}元")
-                            self.log_message(f"已将税额总金额 {total_tax} 写入B11单元格")
+                            # 获取Statement sheet中的税率信息
+                            tax_rates = set()
+                            self.log_message(f"工作表列表: {wb.sheetnames}")
+                            if "Statement" in wb.sheetnames:
+                                statement_sheet = wb["Statement"]
+                                self.log_message(f"Statement工作表最大行数: {statement_sheet.max_row}")
+                                for row in range(2, statement_sheet.max_row + 1):  # 从第2行开始，跳过表头
+                                    tax_rate = statement_sheet.cell(row=row, column=11).value  # K列是第11列
+                                    self.log_message(f"第{row}行税率值: {tax_rate}, 类型: {type(tax_rate)}")
+                                    if tax_rate is not None and isinstance(tax_rate, (int, float, str)):
+                                        try:
+                                            if isinstance(tax_rate, str):
+                                                # 尝试将百分比字符串转换为数字
+                                                tax_rate = float(tax_rate.strip('%'))
+                                            tax_rates.add(tax_rate)
+                                            self.log_message(f"添加税率: {tax_rate}")
+                                        except ValueError as e:
+                                            self.log_message(f"转换税率失败: {str(e)}")
+                            self.log_message(f"最终收集到的税率: {tax_rates}")
+
+                            
+                            # 根据税率数量生成税率文本
+                            if len(tax_rates) > 1:
+                                tax_rate_text = "多税率"
+                                self.log_message(f"检测到多个税率: {tax_rates}，显示'多税率'")
+                            elif len(tax_rates) == 1:
+                                tax_rate = list(tax_rates)[0]
+                                tax_rate_text = f"{tax_rate}%"
+                                self.log_message(f"检测到单个税率: {tax_rate}，显示'{tax_rate}%'")
+                            else:
+                                tax_rate_text = ""
+                                self.log_message("未检测到税率，显示空字符串")
+                            
+                            # 写入B11单元格，包含税率信息
+                            summary_sheet.cell(row=11, column=2, value=f"小写{total_tax:.2f}元 (税率：{tax_rate_text})")
+                            self.log_message(f"已将税额总金额 {total_tax} 和税率信息写入B11单元格")
                         else:
                             self.log_message("税额总金额为空，无法写入B11单元格")
                     except Exception as e:
@@ -1119,7 +1159,7 @@ class ProductClassificationApp:
         developer_frame.pack(side=BOTTOM, fill=X, pady=5)
         developer_label = ttk.Label(
             developer_frame,
-            text="Powered By Cayman Fu @ Sofitel HAIKOU 2025 Ver 2.0",
+            text="Powered By Cayman Fu @ Sofitel HAIKOU 2025 Ver 2.1",
             font=("微软雅黑", 8),
             foreground="gray"
         )
