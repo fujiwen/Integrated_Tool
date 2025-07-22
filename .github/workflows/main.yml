@@ -39,6 +39,12 @@ jobs:
         python -c "import os; print('Current Directory:', os.getcwd())"
         python -c "import os; print('Directory Contents:', os.listdir())"
  
+    - name: Prepare Resource Files
+      run: |
+        Copy-Item favicon.ico -Destination app.ico
+        Get-Content app.rc
+        Get-ChildItem
+
     - name: Build App
       run: |
         dir
